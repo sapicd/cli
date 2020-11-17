@@ -1,72 +1,74 @@
-package main
+package main // import "tcw.im/picbed-cli"
 
 import (
-    "os"
-    "fmt"
-    "flag"
-    "strings"
+	"flag"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
 )
 
-const VERSION = "0.4.0"
+const version = "0.4.0"
 
 var (
-    help    bool
-    version bool
+	h bool
+	v bool
 
-    url    string
-    token  string
-    album  string
-    desc   string
-    expire uint
-    style  string
-    copy   string
+	url    string
+	token  string
+	album  string
+	desc   string
+	expire uint
+	style  string
+	copy   string
 )
 
 func init() {
-    flag.BoolVar(&help, "h", false, "show help")
-    flag.BoolVar(&help, "help", false, "show help")
+	flag.BoolVar(&h, "h", false, "show help")
+	flag.BoolVar(&h, "help", false, "show help")
 
-    flag.BoolVar(&version, "v", false, "show version and exit")
-    flag.BoolVar(&version, "version", false, "show version and exit")
+	flag.BoolVar(&v, "v", false, "show version and exit")
+	flag.BoolVar(&v, "version", false, "show version and exit")
 
-    flag.StringVar(&url, "u", "", "")
-    flag.StringVar(&url, "picbed-url", "", "")
+	flag.StringVar(&url, "u", "", "")
+	flag.StringVar(&url, "picbed-url", "", "")
 
-    flag.StringVar(&token, "t", "", "")
-    flag.StringVar(&token, "picbed-token", "", "")
+	flag.StringVar(&token, "t", "", "")
+	flag.StringVar(&token, "picbed-token", "", "")
 
-    flag.StringVar(&album, "a", "", "")
-    flag.StringVar(&album, "album", "", "")
+	flag.StringVar(&album, "a", "", "")
+	flag.StringVar(&album, "album", "", "")
 
-    flag.StringVar(&desc, "d", "", "")
-    flag.StringVar(&desc, "desc", "", "")
+	flag.StringVar(&desc, "d", "", "")
+	flag.StringVar(&desc, "desc", "", "")
 
-    flag.UintVar(&expire, "e", 0, "")
-    flag.UintVar(&expire, "expire", 0, "")
+	flag.UintVar(&expire, "e", 0, "")
+	flag.UintVar(&expire, "expire", 0, "")
 
-    flag.StringVar(&style, "s", "default", "")
-    flag.StringVar(&style, "style", "default", "")
+	flag.StringVar(&style, "s", "default", "")
+	flag.StringVar(&style, "style", "default", "")
 
-    flag.StringVar(&copy, "c", "", "")
-    flag.StringVar(&copy, "copy", "", "")
+	flag.StringVar(&copy, "c", "", "")
+	flag.StringVar(&copy, "copy", "", "")
 
-    // 改变默认的 Usage
-    flag.Usage = usage
+	flag.Usage = usage
 }
 
 func main() {
-    flag.Parse()
-    if help {
-        flag.Usage()
-    } else if version {
-        fmt.Println(VERSION)
-    } else {
-        handle()
-    }
+	flag.Parse()
+	if h {
+		flag.Usage()
+	} else if v {
+		fmt.Println(version)
+	} else {
+		handle()
+	}
 }
 
 func usage() {
-    helpStr := `usage: picbed-cli [-h] [-v] [-u PICBED_URL] [-t PICBED_TOKEN] [-a ALBUM]
+	helpStr := `usage: picbed-cli [-h] [-v] [-u PICBED_URL] [-t PICBED_TOKEN] [-a ALBUM]
                   [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
                   file [file ...]
 
@@ -96,32 +98,65 @@ optional arguments:
                         for win/mac/linux.
                         By the way, md=markdown, rst=reStructuredText
     `
-    fmt.Println(helpStr)
+	fmt.Println(helpStr)
 }
 
 func handle() {
-    fmt.Println("URL", url)
-    fmt.Println("Token", token)
-    fmt.Println("Album", album)
-    fmt.Println("Desc", desc)
-    fmt.Println("Expire", expire)
-    fmt.Println("Style", style)
-    fmt.Println("Copy", copy)
-    fmt.Println(flag.Args())
-    fmt.Println(flag.NArg())
-    if url == "" {
-        url = os.Getenv("picbed_cli_apiurl")
-        if url != "" && strings.HasSuffix(url, "/api/upload") {
-            url += "/api/upload"
-        }
-    }
-    if token == "" {
-        token = os.Getenv("picbed_cli_apitoken")
-    }
-    if url == "" || token == "" {
-        fmt.Println("No valid picbed api url or token found")
-        usage()
-        os.Exit(127)
-        fmt.Println("not")
-    }
+	fmt.Println("URL", url)
+	fmt.Println("Token", token)
+	fmt.Println("Album", album)
+	fmt.Println("Desc", desc)
+	fmt.Println("Expire", expire)
+	fmt.Println("Style", style)
+	fmt.Println("Copy", copy)
+	fmt.Println(flag.Args())
+	fmt.Println(flag.NArg())
+	if url == "" {
+		url = os.Getenv("picbed_cli_apiurl")
+		if url != "" && !strings.HasSuffix(url, "/api/upload") {
+			url += "/api/upload"
+		}
+	}
+	if token == "" {
+		token = os.Getenv("picbed_cli_apitoken")
+	}
+	if url == "" || token == "" {
+		fmt.Println("No valid picbed api url or token")
+		usage()
+		os.Exit(127)
+	}
+}
+
+func post(stream io.ByteReader) (body string, err error) {
+	client := &http.Client{}
+	data := strings.NewReader("name=cjb")
+
+	/*
+	   dict(
+	                   picbed=b64encode(stream),
+	                   filename=filename,
+	                   album=album,
+	                   title=title,
+	                   expire=expire,
+	                   origin="cli/{}".format(__version__),
+	               )
+	*/
+	req, err := http.NewRequest("POST", url, strings.NewReader("name=cjb"))
+	if err != nil {
+		// handle error
+	}
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Cookie", "name=anny")
+
+	resp, err := client.Do(req)
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(string(body))
 }
