@@ -1,13 +1,18 @@
-package main // import "tcw.im/picbed-cli"
+package main
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
+	"sync"
 )
 
 const version = "0.4.0"
@@ -23,7 +28,19 @@ var (
 	expire uint
 	style  string
 	copy   string
+
+	wg sync.WaitGroup
 )
+
+type apiResult struct {
+	Code     int               `json:"code"`
+	Msg      string            `json:"msg"`
+	Filename string            `json:"filename"`
+	Sender   string            `json:"sender"`
+	API      string            `json:"api"`
+	Src      string            `json:"src"`
+	Tpl      map[string]string `json:"tpl"`
+}
 
 func init() {
 	flag.BoolVar(&h, "h", false, "show help")
@@ -111,52 +128,97 @@ func handle() {
 	fmt.Println("Copy", copy)
 	fmt.Println(flag.Args())
 	fmt.Println(flag.NArg())
+	if flag.NArg() == 0 {
+		usage()
+		return
+	}
 	if url == "" {
 		url = os.Getenv("picbed_cli_apiurl")
-		if url != "" && !strings.HasSuffix(url, "/api/upload") {
-			url += "/api/upload"
-		}
 	}
 	if token == "" {
 		token = os.Getenv("picbed_cli_apitoken")
 	}
+	if url != "" && !strings.HasSuffix(url, "/api/upload") {
+		url += "/api/upload"
+	}
 	if url == "" || token == "" {
 		fmt.Println("No valid picbed api url or token")
 		usage()
-		os.Exit(127)
+		return
 	}
+	fmt.Println("before post")
+	fmt.Println("URL", url)
+	fmt.Println("Token", token)
+
+	files := flag.Args()
+	result := make([]apiResult, len(files))
+	for _, f := range files {
+		f, _ = filepath.Abs(f)
+		if !isFile(f) {
+			continue
+		}
+		wg.Add(1)
+		go post(f, &result)
+	}
+	wg.Wait()
+	fmt.Println(result)
 }
 
-func post(stream io.ByteReader) (body string, err error) {
+func post(f string, result *[]apiResult) {
+	pic, err := ioutil.ReadFile(f)
+	if err != nil {
+		log.Print("read image failed for " + f)
+		return
+	}
+
+	var post http.Request
+	post.ParseForm()
+	post.Form.Add("picbed", base64.StdEncoding.EncodeToString(pic))
+	post.Form.Add("filename", filepath.Base(f))
+	post.Form.Add("album", album)
+	post.Form.Add("title", desc)
+	post.Form.Add("expire", string(strconv.Itoa(int(expire))))
+	post.Form.Add("origin", "cli/"+version)
+
 	client := &http.Client{}
-	data := strings.NewReader("name=cjb")
-
-	/*
-	   dict(
-	                   picbed=b64encode(stream),
-	                   filename=filename,
-	                   album=album,
-	                   title=title,
-	                   expire=expire,
-	                   origin="cli/{}".format(__version__),
-	               )
-	*/
-	req, err := http.NewRequest("POST", url, strings.NewReader("name=cjb"))
+	req, err := http.NewRequest("POST", url, strings.NewReader(post.Form.Encode()))
 	if err != nil {
-		// handle error
+		log.Print(err)
+		return
 	}
-
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Cookie", "name=anny")
+	req.Header.Set("Authorization", "LinkToken "+token)
+	req.Header.Set("User-Agent", "picbed-cli/ "+version)
 
-	resp, err := client.Do(req)
-
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
+	res, err := client.Do(req)
 	if err != nil {
-		// handle error
+		log.Print(err)
+		return
 	}
 
-	fmt.Println(string(body))
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	var data apiResult
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		log.Print(err)
+	}
+	*result = append(*result, data)
+	wg.Done()
+}
+
+func isExists(path string) (os.FileInfo, bool) {
+	f, err := os.Stat(path)
+	return f, err == nil || os.IsExist(err)
+}
+
+func isFile(path string) bool {
+	f, flag := isExists(path)
+	return flag && !f.IsDir()
 }
