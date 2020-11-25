@@ -330,7 +330,7 @@ func autoCopy(content string) {
 			log.Print(err)
 			return
 		}
-		cmd2 := `'display notification "已复制到剪贴板" with title "上传成功" sound name "default"'`
+		cmd2 := fmt.Sprintf("display notification \"%s\" with title \"%s\" sound name \"%s\"", "已复制到剪贴板", "上传成功", "default")
 		err = exec.Command("osascript", "-e", cmd2).Run()
 		if err != nil {
 			log.Print(err)
