@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "0.4.0"
+const version = "0.4.1"
 
 var (
 	h    bool
@@ -34,6 +34,12 @@ var (
 	copy   string
 
 	wg sync.WaitGroup
+
+	// apiVersion: minimum compatible api interface version
+	apiVersion string = "1.6+"
+	goVersion  string = strings.TrimLeft(runtime.Version(), "go")
+	commitID   string // git commit id when building
+	built      string // UTC time when building
 )
 
 type apiResult struct {
@@ -87,10 +93,12 @@ func main() {
 	} else if v {
 		fmt.Println(version)
 	} else if info {
-		fmt.Printf(
-			"%s / %s / %s\n",
-			strings.Title(runtime.Version()), runtime.GOOS, runtime.GOARCH,
-		)
+		fmt.Printf("Cli version: %s\n", version)
+		fmt.Printf("Api version: %s\n", apiVersion)
+		fmt.Printf("Go version:  %s\n", goVersion)
+		fmt.Printf("Git commit:  %s\n", commitID)
+		fmt.Printf("Built:       %s\n", built)
+		fmt.Printf("OS/Arch:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	} else {
 		handle()
 	}
@@ -110,7 +118,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --version         show cli version and exit
-  -i, --info            show system version and exit
+  -i, --info            show full info and exit
   -u, --picbed-url PICBED_URL
                         The picbed upload api url.
                         Or use environment variable: picbed_cli_apiurl
@@ -252,7 +260,7 @@ func apiUpload(f string, result *[]apiResult, index int) {
 	ua := fmt.Sprintf(
 		"picbed-cli/%s go/%s %s %s",
 		version,
-		strings.TrimLeft(runtime.Version(), "go"),
+		goVersion,
 		runtime.GOOS,
 		runtime.GOARCH,
 	)
