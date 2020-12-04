@@ -36,7 +36,7 @@ var (
 	wg sync.WaitGroup
 
 	// apiVersion: minimum compatible api interface version
-	apiVersion string = "1.6+"
+	apiVersion string = "1.6.0"
 	goVersion  string = strings.TrimLeft(runtime.Version(), "go")
 	commitID   string // git commit id when building
 	built      string // UTC time when building
@@ -203,6 +203,8 @@ func handle() {
 	case "default": //the style default here
 		output, _ := json.Marshal(result)
 		fmt.Println(string(output))
+	case "empty":
+		//ignore output
 	default: //handle with python module
 		output, _ := json.Marshal(result)
 		cmd := exec.Command("python", "-m", style, string(output))
@@ -307,6 +309,15 @@ func isFile(path string) bool {
 	return flag && !f.IsDir()
 }
 
+func getCopyContent(contents []map[string]string, copyType string) string {
+	var content strings.Builder
+	for _, res := range contents {
+		content.WriteString(res[copyType])
+		content.WriteString("\n")
+	}
+	return strings.TrimRight(content.String(), "\n")
+}
+
 func autoCopy(content string) {
 	if content == "" {
 		return
@@ -353,20 +364,11 @@ func autoCopy(content string) {
 	}
 }
 
-func getCopyContent(contents []map[string]string, copyType string) string {
-	var content strings.Builder
-	for _, res := range contents {
-		content.WriteString(res[copyType])
-		content.WriteString("\n")
-	}
-	return strings.TrimRight(content.String(), "\n")
-}
-
 func genTmpPS1() (filepath string) {
 	tpl := []byte(`
 param(
-    [String] $Title = 'Upload successfully',
-    [String] $SubTitle = 'Copied to clipboard'
+    [String] $Title,
+    [String] $SubTitle
 )
 
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
