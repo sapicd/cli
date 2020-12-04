@@ -3,49 +3,55 @@
 The command line upload tool of [staugur/picbed](https://github.com/staugur/picbed),
 written in go language, supports Windows/macOS/Linux.
 
+> English | [中文](README-cn.md)
+
 ## Install
 
 ### Windows
 
-在[github release](https://github.com/staugur/picbed-cli/releases)中选择发行版下的附件：
-picbed-cli.{VERSION}-windows-amd64.zip，解压后的picbed-cli.exe即程序。
+In [github release](https://github.com/staugur/picbed-cli/releases) page,
+select the attachment under the distribution:
+picbed-cli.{VERSION}-windows-amd64.zip, get picbed-cli.exe after decompression.
 
 ### Linux
 
-Linux操作系统如CentOS、Ubuntu等，除参考上述Windows方法外（下载
-picbed-cli.{VERSION}-linux-amd64.tar.gz），还可以直接命令行下载：
+As above, download the picbed-cli.{VERSION}-linux-amd64.tar.gz format package
+and unzip it to get picbed-cli.
+
+Or, you can also download from the command line:
 
 ```bash
 version=0.4.1
-pkg_github=https://github.com/staugur/picbed-cli/releases/download/${version}/picbed-cli.${version}-linux-amd64.tar.gz
-pkg_upyun=https://static.saintic.com/download/picbed-cli/picbed-cli.${version}-linux-amd64.tar.gz
-wget -c $pkg_upyun    # 国内pkg_github下载不理想，使用pkg_upyun备用地址
+wget -c https://github.com/staugur/picbed-cli/releases/download/${version}/picbed-cli.${version}-linux-amd64.tar.gz
 tar zxf picbed-cli.${version}-linux-amd64.tar.gz 
-mv picbed-cli ~/bin/  # 移动到PATH目录下
+mv picbed-cli ~/bin/
 picbed-cli -v
 ```
 
 ### macOS
 
-参考Windows安装方法，下载解压picbed-cli.{VERSION}-darwin-amd64.tar.gz，或者参考Linux
-命令行下载，除这两种方法外，还可以使用homebrew直接安装。
+As above, download the picbed-cli.{VERSION}-darwin-amd64.tar.gz format package
+and unzip it to get picbed-cli, or with command line(Refer to Linux).
 
-我已制作了[Tap](https://github.com/staugur/homebrew-tap)，
-在macOS或支持homebrew的操作系统中可以这么安装：
+In addition to these two methods, you can use homebrew to install directly.
+
+I've made [Tap](https://github.com/staugur/homebrew-tap),
+On macOS or homebrew supported operating systems,
+you can install the following:
 
 ```bash
 brew tap staugur/tap
 brew install picbed-cli
 ```
 
-这么更新：
+#### update
 
 ```bash
 brew update
 brew upgrade picbed-cli
 ```
 
-这么卸载：
+#### uninstall
 
 ```bash
 brew uninstall picbed-cli
