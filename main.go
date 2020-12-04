@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "0.4.1"
+const version = "0.4.2"
 
 var (
 	h    bool
@@ -128,7 +128,7 @@ optional arguments:
   -a, --album ALBUM     Set image album
   -d, --desc DESC       Set image title(description)
   -e, --expire EXPIRE   Set image expire(seconds)
-  -s, --style STYLE     The upload output style: { default, typora, line, <MOD> }.
+  -s, --style STYLE     The upload output style: { default, typora, line, empty, <MOD> }.
                         <MOD> allows to pass in a python module name, and use
                         "python -m py-mod-name" to customize the output style.
   -c, --copy {url,md,rst}

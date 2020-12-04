@@ -8,7 +8,6 @@ LINUX=$(BINARY).linux-amd64
 MACOS=$(BINARY).darwin-amd64
 WIN=$(BINARY).windows-amd64.exe
 LDFLAGS=-ldflags "-s -w -X main.commitID=${CommitID} -X main.built=${Built}"
-UPXBIN=$(shell which upx)
 
 help:
 	@echo "  make clean  - Remove binaries and vim swap files"
@@ -29,12 +28,9 @@ build-macos:
 build-windows:
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o $(WIN) && chmod +x $(WIN)
 
-upx:
-	@test -f "${UPXBIN}" && upx $(LINUX) $(MACOS) $(WIN) || echo skip upx
-
 build: clean gotool build-linux build-macos build-windows
 
-release: gotool build upx
+release: gotool build
 	mv $(LINUX) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-linux-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(MACOS) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-darwin-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(WIN) $(BINARY).exe && zip $(BINARY).$(VERSION)-windows-amd64.zip $(BINARY).exe && rm $(BINARY).exe
