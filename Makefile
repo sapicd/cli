@@ -1,6 +1,6 @@
 .PHONY: help clean
 
-BINARY=picbed-cli
+BINARY=sapicli
 VERSION=$(shell go run main.go -v)
 CommitID=$(shell git log --pretty=format:"%h" -1)
 Built=$(shell date -u "+%Y-%m-%dT%H:%M:%SZ")
@@ -38,4 +38,4 @@ release: gotool build
 clean:
 	find . -name '*.tar.gz' -exec rm -f {} +
 	find . -name '*.zip' -exec rm -f {} +
-	find . -name 'picbed-cli.*-amd64*' -exec rm -f {} +
+	find . -name 'sapicli.*-amd64*' -exec rm -f {} +

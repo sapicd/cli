@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "0.4.2"
+const version = "0.5.0"
 
 var (
 	h    bool
@@ -105,12 +105,12 @@ func main() {
 }
 
 func usage() {
-	helpStr := `usage: picbed-cli [-h] [-v] [-i] [-u PICBED_URL] [-t PICBED_TOKEN] [-a ALBUM]
+	helpStr := `usage: sapicli [-h] [-v] [-i] [-u PICBED_URL] [-t PICBED_TOKEN] [-a ALBUM]
                   [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
                   file [file ...]
 
 Doc to https://picbed.rtfd.vip/cli.html
-Git to https://github.com/staugur/picbed-cli
+Git to https://github.com/sapicd/cli
 
 positional arguments:
   file                  local image file

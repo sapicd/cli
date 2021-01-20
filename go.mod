@@ -1,3 +1,3 @@
-module tcw.im/picbed-cli
+module tcw.im/sapicli
 
 go 1.15
