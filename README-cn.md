@@ -1,6 +1,6 @@
 # sapicli
 
-[sapicd/sapic](https://github.com/sapicd/sapic)图床的命令行上传工具，
+[sapicd/sapic](https://github.com/sapicd/sapic) 图床的命令行上传工具，
 使用golang编写，支持Windows/macOS/Linux
 
 > [English](README.md) | 中文
@@ -18,7 +18,7 @@ Linux操作系统如CentOS、Ubuntu等，除参考上述Windows方法外（下�
 sapicli.{VERSION}-linux-amd64.tar.gz），还可以直接命令行下载：
 
 ```bash
-version=0.4.1
+version=0.5.0
 wget -c https://static.saintic.com/download/picbed-cli/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/  # 移动到PATH目录下

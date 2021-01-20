@@ -21,7 +21,7 @@ and unzip it to get sapicli.
 Or, you can also download from the command line:
 
 ```bash
-version=0.4.1
+version=0.5.0
 wget -c https://github.com/sapicd/cli/releases/download/${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/
