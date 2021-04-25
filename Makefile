@@ -39,3 +39,6 @@ clean:
 	find . -name '*.tar.gz' -exec rm -f {} +
 	find . -name '*.zip' -exec rm -f {} +
 	find . -name 'sapicli.*-amd64*' -exec rm -f {} +
+
+docker:
+	docker build -t staugur/sapicli

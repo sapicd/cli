@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "0.5.0"
+const version = "0.5.1"
 
 var (
 	h    bool
@@ -96,8 +96,12 @@ func main() {
 		fmt.Printf("Cli version: %s\n", version)
 		fmt.Printf("Api version: %s\n", apiVersion)
 		fmt.Printf("Go version:  %s\n", goVersion)
-		fmt.Printf("Git commit:  %s\n", commitID)
-		fmt.Printf("Built:       %s\n", built)
+		if commitID != "" {
+			fmt.Printf("Git commit:  %s\n", commitID)
+		}
+		if built != "" {
+			fmt.Printf("Built:       %s\n", built)
+		}
 		fmt.Printf("OS/Arch:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	} else {
 		handle()

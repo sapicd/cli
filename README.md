@@ -7,6 +7,31 @@ written in go language, supports Windows/macOS/Linux.
 
 ## Install
 
+### Docker
+
+#### Download the image from Docker Hub
+
+```bash
+docker pull staugur/sapicli
+```
+
+#### Build from source code
+
+```bash
+git clone https://github.com/sapicd/cli
+cd cli
+docker build staugur/sapicli # or: make docker
+```
+
+#### Usage
+
+```bash
+docker run --rm -ti sapicli
+docker run --rm -ti sapicli -v
+docker run --rm -ti sapicli -h
+```
+
+
 ### Windows
 
 In [github release](https://github.com/sapicd/cli/releases) page,
@@ -21,7 +46,7 @@ and unzip it to get sapicli.
 Or, you can also download from the command line:
 
 ```bash
-version=0.5.0
+version=0.5.1
 wget -c https://github.com/sapicd/cli/releases/download/${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/
