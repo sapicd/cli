@@ -11,14 +11,12 @@ WORKDIR /build
 COPY . .
 
 RUN go env -w GOPROXY=https://goproxy.cn,direct && \
-    go build -ldflags "-s -w -X main.built=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" -o sapicli .
+    go build -ldflags "-s -w -X main.commitID=N/A -X main.built=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" -o sapicli .
 
 # run application with a small image
 FROM scratch
 
 COPY --from=builder /build/sapicli /bin/
-
-EXPOSE 16001
 
 CMD ["-i"]
 

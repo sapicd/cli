@@ -41,4 +41,4 @@ clean:
 	find . -name 'sapicli.*-amd64*' -exec rm -f {} +
 
 docker:
-	docker build -t staugur/sapicli
+	docker build -t staugur/sapicli .
