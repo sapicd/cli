@@ -26,9 +26,9 @@ docker build staugur/sapicli # or: make docker
 #### 使用
 
 ```bash
-docker run --rm -ti sapicli
-docker run --rm -ti sapicli -v
-docker run --rm -ti sapicli -h
+docker run --rm -ti staugur/sapicli
+docker run --rm -ti staugur/sapicli -v
+docker run --rm -ti staugur/sapicli -h
 ```
 
 ### Windows
@@ -80,4 +80,4 @@ brew untap staugur/tap
 
 ## 用法
 
-Doc to https://picbed.rtfd.vip/cli.html
+Doc to [sapic/cli](https://sapic.rtfd.vip/cli.html)
