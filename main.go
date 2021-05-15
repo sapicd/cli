@@ -1,3 +1,19 @@
+/*
+   Copyright 2021 Hiroshi.tao
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package main
 
 import (
@@ -18,7 +34,7 @@ import (
 	"time"
 )
 
-const version = "0.5.1"
+const version = "0.5.2"
 
 var (
 	h    bool
@@ -36,10 +52,10 @@ var (
 	wg sync.WaitGroup
 
 	// apiVersion: minimum compatible api interface version
-	apiVersion string = "1.6.0"
+	apiVersion string = "1.12.0"
 	goVersion  string = strings.TrimLeft(runtime.Version(), "go")
-	commitID   string // git commit id when building
-	built      string // UTC time when building
+	commitID   string = "N/A" // git commit id when building
+	built      string = "N/A" // UTC time when building
 )
 
 type apiResult struct {
@@ -53,6 +69,8 @@ type apiResult struct {
 }
 
 func init() {
+	log.SetFlags(log.LstdFlags)
+
 	flag.BoolVar(&h, "h", false, "show help")
 	flag.BoolVar(&h, "help", false, "show help")
 
@@ -64,9 +82,11 @@ func init() {
 
 	flag.StringVar(&url, "u", "", "")
 	flag.StringVar(&url, "picbed-url", "", "")
+	flag.StringVar(&url, "sapic-url", "", "")
 
 	flag.StringVar(&token, "t", "", "")
 	flag.StringVar(&token, "picbed-token", "", "")
+	flag.StringVar(&token, "sapic-token", "", "")
 
 	flag.StringVar(&album, "a", "", "")
 	flag.StringVar(&album, "album", "", "")
@@ -95,14 +115,10 @@ func main() {
 	} else if info {
 		fmt.Printf("Cli version: %s\n", version)
 		fmt.Printf("Api version: %s\n", apiVersion)
+		fmt.Printf("Git commit:  %s\n", commitID)
 		fmt.Printf("Go version:  %s\n", goVersion)
-		if commitID != "" {
-			fmt.Printf("Git commit:  %s\n", commitID)
-		}
-		if built != "" {
-			fmt.Printf("Built:       %s\n", built)
-		}
 		fmt.Printf("OS/Arch:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
+		fmt.Printf("Built:       %s\n", built)
 	} else {
 		handle()
 	}
@@ -113,7 +129,7 @@ func usage() {
                   [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
                   file [file ...]
 
-Doc to https://picbed.rtfd.vip/cli.html
+Doc to https://sapic.rtfd.vip/cli.html
 Git to https://github.com/sapicd/cli
 
 positional arguments:
@@ -123,12 +139,12 @@ optional arguments:
   -h, --help            show this help message and exit
   -v, --version         show cli version and exit
   -i, --info            show full info and exit
-  -u, --picbed-url PICBED_URL
-                        The picbed upload api url.
-                        Or use environment variable: picbed_cli_apiurl
-  -t, --picbed-token PICBED_TOKEN
-                        The picbed LinkToken.
-                        Or use environment variable: picbed_cli_apitoken
+  -u, --sapic-url SAPIC_URL
+                        The sapic upload api url.
+                        Or use environment variable: sapicli_apiurl
+  -t, --sapic-token SAPI_TOKEN
+                        The sapic LinkToken.
+                        Or use environment variable: sapicli_apitoken
   -a, --album ALBUM     Set image album
   -d, --desc DESC       Set image title(description)
   -e, --expire EXPIRE   Set image expire(seconds)
@@ -162,12 +178,19 @@ func handle() {
 	}
 	if url == "" {
 		url = os.Getenv("picbed_cli_apiurl")
+		if url == "" {
+			url = os.Getenv("sapicli_apiurl")
+		}
 	}
 	if token == "" {
 		token = os.Getenv("picbed_cli_apitoken")
+		if token == "" {
+			token = os.Getenv("sapicli_apitoken")
+
+		}
 	}
 	if url == "" {
-		fmt.Printf("No valid picbed api url\n\n")
+		fmt.Printf("No valid sapic(picbed) api url\n\n")
 		usage()
 		return
 	}
@@ -228,17 +251,8 @@ func handle() {
 	for i, res := range result {
 		if res.Code == 0 && res.Src != "" {
 			url := res.Tpl["URL"]
-			if url == "" {
-				url = res.Src
-			}
 			rst := res.Tpl["rST"]
-			if rst == "" {
-				rst = fmt.Sprintf(".. image:: %s", url)
-			}
 			md := res.Tpl["Markdown"]
-			if md == "" {
-				md = fmt.Sprintf("![](%s)", url)
-			}
 			contents[i] = map[string]string{
 				"name": res.Filename, "url": url, "rst": rst, "md": md,
 			}
@@ -256,22 +270,27 @@ func apiUpload(f string, result *[]apiResult, index int) {
 
 	var post http.Request
 	post.ParseForm()
+	post.Form.Add("origin", "cli/"+version)
+	post.Form.Add("_upload_field", "picbed")
 	post.Form.Add("picbed", base64.StdEncoding.EncodeToString(pic))
 	post.Form.Add("filename", filepath.Base(f))
 	post.Form.Add("album", album)
 	post.Form.Add("title", desc)
-	post.Form.Add("expire", string(strconv.Itoa(int(expire))))
-	post.Form.Add("origin", "cli/"+version)
+	if expire > 0 {
+		post.Form.Add("expire", string(strconv.Itoa(int(expire))))
+	}
 
 	ua := fmt.Sprintf(
-		"picbed-cli/%s go/%s %s %s",
+		"sapicli/%s go/%s %s %s",
 		version,
 		goVersion,
 		runtime.GOOS,
 		runtime.GOARCH,
 	)
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("POST", url, strings.NewReader(post.Form.Encode()))
+	client := &http.Client{Timeout: 30 * time.Second}
+	req, err := http.NewRequest(
+		"POST", url, strings.NewReader(post.Form.Encode()),
+	)
 	if err != nil {
 		log.Fatal(err)
 		return
