@@ -17,3 +17,5 @@
 sapicli.*.tar.gz
 sapicli.*.zip
 sapicli.*-amd64
+sapicli
+bin/

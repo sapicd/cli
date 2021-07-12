@@ -28,12 +28,14 @@ build-macos:
 build-windows:
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o $(WIN) && chmod +x $(WIN)
 
-build: clean gotool build-linux build-macos build-windows
+build:
+	go build ${LDFLAGS} -o ./bin/sapicli
 
-release: gotool build
+release: gotool build-linux build-macos build-windows
 	mv $(LINUX) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-linux-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(MACOS) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-darwin-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(WIN) $(BINARY).exe && zip $(BINARY).$(VERSION)-windows-amd64.zip $(BINARY).exe && rm $(BINARY).exe
+	clean
 
 clean:
 	find . -name '*.tar.gz' -exec rm -f {} +
