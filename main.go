@@ -264,7 +264,7 @@ func apiUpload(f string, result *[]apiResult, index int) {
 	post.Form.Add("origin", "cli/"+version)
 
 	ua := fmt.Sprintf(
-		"picbed-cli/%s go/%s %s %s",
+		"sapicli/%s go/%s %s %s",
 		version,
 		goVersion,
 		runtime.GOOS,
