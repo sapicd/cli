@@ -18,9 +18,8 @@ docker pull staugur/sapicli
 #### 从 源码 构建
 
 ```bash
-git clone https://github.com/sapicd/cli
-cd cli
-docker build staugur/sapicli # or: make docker
+git clone https://github.com/sapicd/cli && cd cli
+docker build -t staugur/sapicli . # or: make docker
 ```
 
 #### 使用
@@ -42,8 +41,8 @@ Linux操作系统如CentOS、Ubuntu等，除参考上述Windows方法外（下�
 sapicli.{VERSION}-linux-amd64.tar.gz），还可以直接命令行下载：
 
 ```bash
-version=0.5.1
-wget -c https://static.saintic.com/download/picbed-cli/sapicli.${version}-linux-amd64.tar.gz
+version=0.5.2
+wget -c https://github.com/sapicd/cli/releases/download/v${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/  # 移动到PATH目录下
 sapicli -v

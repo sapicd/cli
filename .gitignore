@@ -19,3 +19,4 @@ sapicli.*.zip
 sapicli.*-amd64
 sapicli
 bin/
+dist/

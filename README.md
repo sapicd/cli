@@ -18,9 +18,8 @@ docker pull staugur/sapicli
 #### Build from source code
 
 ```bash
-git clone https://github.com/sapicd/cli
-cd cli
-docker build staugur/sapicli # or: make docker
+git clone https://github.com/sapicd/cli && cd cli
+docker build -t staugur/sapicli . # or: make docker
 ```
 
 #### Usage
@@ -45,8 +44,8 @@ and unzip it to get sapicli.
 Or, you can also download from the command line:
 
 ```bash
-version=0.5.1
-wget -c https://github.com/sapicd/cli/releases/download/${version}/sapicli.${version}-linux-amd64.tar.gz
+version=0.5.2
+wget -c https://github.com/sapicd/cli/releases/download/v${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/
 sapicli -v
