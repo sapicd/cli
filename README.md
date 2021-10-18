@@ -18,7 +18,7 @@ docker pull staugur/sapicli
 #### Build from source code
 
 ```bash
-git clone https://github.com/sapicd/cli && cd cli
+git clone https://github.com/sapicd/cli sapicli && cd sapicli
 docker build -t staugur/sapicli . # or: make docker
 ```
 

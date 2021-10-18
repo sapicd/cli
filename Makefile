@@ -35,7 +35,7 @@ release: gotool build-linux build-macos build-windows
 	mv $(LINUX) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-linux-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(MACOS) $(BINARY) && tar zcvf $(BINARY).$(VERSION)-darwin-amd64.tar.gz $(BINARY) && rm $(BINARY)
 	mv $(WIN) $(BINARY).exe && zip $(BINARY).$(VERSION)-windows-amd64.zip $(BINARY).exe && rm $(BINARY).exe
-	clean
+	$(make) clean
 
 clean:
 	find . -name '*.tar.gz' -exec rm -f {} +
