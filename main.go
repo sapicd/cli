@@ -153,7 +153,7 @@ optional arguments:
                         "python -m py-mod-name" to customize the output style.
   -c, --copy {url,md,rst}
                         Copy the uploaded image url type to the clipboard
-                        for Windows/MacOS/Linux.
+                        for Windows/macOS/Linux.
                         By the way, md=Markdown, rst=reStructuredText
     `
 	fmt.Println(helpStr)
