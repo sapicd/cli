@@ -30,5 +30,4 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-      - 'README*.md'
       - '.github'

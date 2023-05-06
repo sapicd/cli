@@ -44,7 +44,7 @@ and unzip it to get sapicli.
 Or, you can also download from the command line:
 
 ```bash
-version=0.5.3
+version=0.5.4
 wget -c https://github.com/sapicd/cli/releases/download/v${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/
@@ -83,6 +83,6 @@ brew untap staugur/tap
 
 ------
 
-## Usage
+## Documentation
 
 Doc to [sapic/cli](https://sapic.rtfd.vip/cli.html)

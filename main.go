@@ -34,7 +34,7 @@ import (
 	"time"
 )
 
-const version = "0.5.3"
+const version = "0.5.4"
 
 var (
 	h    bool
@@ -71,14 +71,14 @@ type apiResult struct {
 func init() {
 	log.SetFlags(log.LstdFlags)
 
-	flag.BoolVar(&h, "h", false, "show help")
-	flag.BoolVar(&h, "help", false, "show help")
+	flag.BoolVar(&h, "h", false, "")
+	flag.BoolVar(&h, "help", false, "")
 
-	flag.BoolVar(&v, "v", false, "show version and exit")
-	flag.BoolVar(&v, "version", false, "show version and exit")
+	flag.BoolVar(&v, "v", false, "")
+	flag.BoolVar(&v, "version", false, "")
 
-	flag.BoolVar(&info, "i", false, "show system version and exit")
-	flag.BoolVar(&info, "info", false, "show system version and exit")
+	flag.BoolVar(&info, "i", false, "")
+	flag.BoolVar(&info, "info", false, "")
 
 	flag.StringVar(&url, "u", "", "")
 	flag.StringVar(&url, "picbed-url", "", "")
@@ -125,7 +125,7 @@ func main() {
 }
 
 func usage() {
-	helpStr := `usage: sapicli [-h] [-v] [-i] [-u PICBED_URL] [-t PICBED_TOKEN] [-a ALBUM]
+	helpStr := `usage: sapicli [-h] [-v] [-i] [-u SAPIC_URL] [-t SAPIC_TOKEN] [-a ALBUM]
                   [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
                   file [file ...]
 
@@ -153,8 +153,8 @@ optional arguments:
                         "python -m py-mod-name" to customize the output style.
   -c, --copy {url,md,rst}
                         Copy the uploaded image url type to the clipboard
-                        for win/mac/linux.
-                        By the way, md=markdown, rst=reStructuredText
+                        for Windows/MacOS/Linux.
+                        By the way, md=Markdown, rst=reStructuredText
     `
 	fmt.Println(helpStr)
 }
@@ -230,8 +230,7 @@ func handle() {
 	case "default": //the style default here
 		output, _ := json.Marshal(result)
 		fmt.Println(string(output))
-	case "empty":
-		//ignore output
+	case "empty": //ignore output
 	default: //handle with python module
 		output, _ := json.Marshal(result)
 		cmd := exec.Command("python", "-m", style, string(output))
