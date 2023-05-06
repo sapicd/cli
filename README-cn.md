@@ -41,7 +41,7 @@ Linux操作系统如CentOS、Ubuntu等，除参考上述Windows方法外（下�
 sapicli.{VERSION}-linux-amd64.tar.gz），还可以直接命令行下载：
 
 ```bash
-version=0.5.2
+version=0.5.3
 wget -c https://github.com/sapicd/cli/releases/download/v${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/  # 移动到PATH目录下
