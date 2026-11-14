@@ -123,4 +123,4 @@ usage: sapicli [-h] [-v] [-i] [-u SAPIC_URL] [-t SAPIC_TOKEN] [-a ALBUM]
 
 ## 文档
 
-Doc to [sapic/cli](https://sapic.rtfd.vip/cli.html)
+Doc to [sapic/cli](https://sapic.readthedocs.io/zh-cn/latest/cli.html)

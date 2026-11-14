@@ -170,7 +170,7 @@ func usage() {
                   [-A {auto,v1,v2}]
                   file [file ...]
 
-Doc to https://sapic.rtfd.vip/cli.html
+Doc to https://sapic.readthedocs.io/zh-cn/latest/cli.html
 Git to https://github.com/sapicd/cli
 
 positional arguments:

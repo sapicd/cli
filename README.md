@@ -129,4 +129,4 @@ So v1 sites keep the old `-u site -t LinkToken` usage; for v2 sites just replace
 
 ## Documentation
 
-Doc to [sapic/cli](https://sapic.rtfd.vip/cli.html)
+Doc to [sapic/cli](https://sapic.readthedocs.io/zh-cn/latest/cli.html)
