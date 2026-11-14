@@ -37,7 +37,7 @@ build:
 	go build ${LDFLAGS} -o ./bin/sapicli
 
 release: gotool
-	goreleaser --snapshot --skip-publish --rm-dist
+	goreleaser release --snapshot --clean --skip=publish
 
 docker:
 	docker build -t staugur/sapicli .
