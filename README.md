@@ -44,7 +44,7 @@ and unzip it to get sapicli.
 Or, you can also download from the command line:
 
 ```bash
-version=0.5.4
+version=0.6.0
 wget -c https://github.com/sapicd/cli/releases/download/v${version}/sapicli.${version}-linux-amd64.tar.gz
 tar zxf sapicli.${version}-linux-amd64.tar.gz
 mv sapicli ~/bin/
@@ -80,6 +80,50 @@ brew upgrade sapicli
 brew uninstall sapicli
 brew untap staugur/tap
 ```
+
+------
+
+## Usage
+
+```bash
+# upload and print the json result
+sapicli -u https://your.site -t <Token> screenshot.png
+
+# upload and copy the markdown link to the clipboard
+sapicli -u https://your.site -t <Token> -c md screenshot.png
+```
+
+```text
+$ sapicli -h
+usage: sapicli [-h] [-v] [-i] [-u SAPIC_URL] [-t SAPIC_TOKEN] [-a ALBUM]
+                  [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
+                  [-A {auto,v1,v2}]
+                  file [file ...]
+```
+
+| Option | Description |
+| --- | --- |
+| `-u, --sapic-url` | Site url, `http://` is optional, `/api/upload` (v1) or `/api/v2/upload` (v2) is appended automatically. Env: `sapicli_apiurl` |
+| `-t, --sapic-token` | Token: a LinkToken for v1, a PAT (starts with `sp_`, needs the `upload` scope) for v2. Env: `sapicli_apitoken` |
+| `-a, --album` | Album, its name for v1, its name or id for v2 |
+| `-d, --desc` | Image title (description) |
+| `-e, --expire` | Image expire in seconds, for temporary images |
+| `-s, --style` | Output style: `default` / `typora` / `line` / `empty` / `<python module>` |
+| `-c, --copy` | Copy the uploaded `url` / `md` / `rst` to the clipboard |
+| `-A, --api-version` | Api version: `auto` (default) / `v1` / `v2` |
+
+### Both v1 and v2 apis are supported
+
+| | v1 | v2 |
+| --- | --- | --- |
+| Upload endpoint | `POST /api/upload` | `POST /api/v2/upload` |
+| Auth header | `Authorization: LinkToken <LinkToken>` | `Authorization: Bearer <PAT>` |
+| Body | form data, the image is base64 encoded in the `picbed` field | `multipart/form-data`, the image is in the `file` field |
+| Album | `album` (name) | `album_id` (a name is looked up and resolved automatically) |
+
+`auto` detection order: explicit `-A` > an `/api/v2` or `/api/upload` path already in `-u` > site probe (`GET /api/v2/site`) > the `sp_` token prefix > v1 by default.
+
+So v1 sites keep the old `-u site -t LinkToken` usage; for v2 sites just replace `-t` with a PAT created in "Settings → Access tokens", the other options and the output styles stay the same. The v2 `src` (`data.image.src`) is normalized into the v1-shaped output, so `-c` copying and custom style modules work unchanged.
 
 ------
 

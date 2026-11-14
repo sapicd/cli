@@ -17,13 +17,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
+	"net/textproto"
+	neturl "net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,7 +38,14 @@ import (
 	"time"
 )
 
-const version = "0.5.4"
+const (
+	version = "0.6.0"
+
+	// apiV1: POST /api/upload, Authorization: LinkToken <token>
+	// apiV2: POST /api/v2/upload, Authorization: Bearer <PAT>
+	apiV1 = "v1"
+	apiV2 = "v2"
+)
 
 var (
 	h    bool
@@ -48,14 +59,16 @@ var (
 	expire uint
 	style  string
 	copy   string
+	apiVer string
 
 	wg sync.WaitGroup
 
 	// apiVersion: minimum compatible api interface version
-	apiVersion string = "1.12.0"
-	goVersion  string = strings.TrimLeft(runtime.Version(), "go")
-	commitID   string = "N/A" // git commit id when building
-	built      string = "N/A" // UTC time when building
+	apiVersion   string = "1.12.0"
+	apiVersionV2 string = "2.0.0"
+	goVersion    string = strings.TrimLeft(runtime.Version(), "go")
+	commitID     string = "N/A" // git commit id when building
+	built        string = "N/A" // UTC time when building
 )
 
 type apiResult struct {
@@ -66,6 +79,30 @@ type apiResult struct {
 	API      string            `json:"api"`
 	Src      string            `json:"src"`
 	Tpl      map[string]string `json:"tpl"`
+}
+
+// apiV2Result is the v2 response envelope, flattened into apiResult later.
+type apiV2Result struct {
+	Code      string `json:"code"`
+	Message   string `json:"message"`
+	RequestID string `json:"request_id"`
+	Data      struct {
+		Image struct {
+			Sha      string            `json:"sha"`
+			Filename string            `json:"filename"`
+			Src      string            `json:"src"`
+			Tpl      map[string]string `json:"tpl"`
+		} `json:"image"`
+	} `json:"data"`
+}
+
+// uploadTarget holds what differs between the two api versions.
+type uploadTarget struct {
+	api     string // apiV1 or apiV2
+	root    string // site root, without any api path
+	url     string // upload endpoint
+	token   string
+	albumID string // v2 only, resolved from -a
 }
 
 func init() {
@@ -103,6 +140,9 @@ func init() {
 	flag.StringVar(&copy, "c", "", "")
 	flag.StringVar(&copy, "copy", "", "")
 
+	flag.StringVar(&apiVer, "A", "auto", "")
+	flag.StringVar(&apiVer, "api-version", "auto", "")
+
 	flag.Usage = usage
 }
 
@@ -114,7 +154,7 @@ func main() {
 		fmt.Println(version)
 	} else if info {
 		fmt.Printf("Cli version: %s\n", version)
-		fmt.Printf("Api version: %s\n", apiVersion)
+		fmt.Printf("Api version: %s (%s), %s (%s)\n", apiVersion, apiV1, apiVersionV2, apiV2)
 		fmt.Printf("Git commit:  %s\n", commitID)
 		fmt.Printf("Go version:  %s\n", goVersion)
 		fmt.Printf("OS/Arch:     %s/%s\n", runtime.GOOS, runtime.GOARCH)
@@ -127,6 +167,7 @@ func main() {
 func usage() {
 	helpStr := `usage: sapicli [-h] [-v] [-i] [-u SAPIC_URL] [-t SAPIC_TOKEN] [-a ALBUM]
                   [-d DESC] [-e EXPIRE] [-s STYLE] [-c {url,md,rst}]
+                  [-A {auto,v1,v2}]
                   file [file ...]
 
 Doc to https://sapic.rtfd.vip/cli.html
@@ -140,12 +181,14 @@ optional arguments:
   -v, --version         show cli version and exit
   -i, --info            show full info and exit
   -u, --sapic-url SAPIC_URL
-                        The sapic upload api url.
+                        The sapic site url, the api path is appended
+                        automatically.
                         Or use environment variable: sapicli_apiurl
   -t, --sapic-token SAPI_TOKEN
-                        The sapic LinkToken.
+                        The sapic token: a LinkToken for v1, a PAT(sp_...)
+                        for v2.
                         Or use environment variable: sapicli_apitoken
-  -a, --album ALBUM     Set image album
+  -a, --album ALBUM     Set image album, its name or its id(v2 only)
   -d, --desc DESC       Set image title(description)
   -e, --expire EXPIRE   Set image expire(seconds)
   -s, --style STYLE     The upload output style: { default, typora, line, empty, <MOD> }.
@@ -155,6 +198,12 @@ optional arguments:
                         Copy the uploaded image url type to the clipboard
                         for Windows/macOS/Linux.
                         By the way, md=Markdown, rst=reStructuredText
+  -A, --api-version {auto,v1,v2}
+                        The sapic api version to talk to, auto detects it from
+                        the site and the token. v1 = POST /api/upload with
+                        "Authorization: LinkToken <token>",
+                        v2 = POST /api/v2/upload with
+                        "Authorization: Bearer <PAT>".
     `
 	fmt.Println(helpStr)
 }
@@ -173,6 +222,13 @@ func handle() {
 	}
 	if _, ok := allowCopies[copy]; !ok {
 		fmt.Printf("No valid copy option\n\n")
+		usage()
+		return
+	}
+	switch strings.ToLower(strings.TrimSpace(apiVer)) {
+	case "", "auto", "v1", "v2", "1", "2":
+	default:
+		fmt.Printf("No valid api version option\n\n")
 		usage()
 		return
 	}
@@ -197,8 +253,10 @@ func handle() {
 	if !strings.HasPrefix(url, "http") {
 		url = "http://" + url
 	}
-	if !strings.HasSuffix(url, "/api/upload") {
-		url = strings.TrimRight(url, "/") + "/api/upload"
+	target := newUploadTarget(url, token)
+	if target.api == apiV2 && album != "" {
+		// v2 only accepts album_id, so -a may be a numeric id or an album name.
+		target.albumID = resolveAlbumID(target, album)
 	}
 
 	var files []string
@@ -212,7 +270,7 @@ func handle() {
 	result := make([]apiResult, len(files))
 	for i, f := range files {
 		wg.Add(1)
-		go apiUpload(f, &result, i)
+		go apiUpload(target, f, &result, i)
 	}
 	wg.Wait()
 
@@ -260,44 +318,28 @@ func handle() {
 	autoCopy(getCopyContent(contents, copy))
 }
 
-func apiUpload(f string, result *[]apiResult, index int) {
+func apiUpload(target uploadTarget, f string, result *[]apiResult, index int) {
+	defer wg.Done()
+
 	pic, err := ioutil.ReadFile(f)
 	if err != nil {
 		log.Fatal("read image failed for " + f)
 		return
 	}
 
-	var post http.Request
-	post.ParseForm()
-	post.Form.Add("origin", "cli/"+version)
-	post.Form.Add("_upload_field", "picbed")
-	post.Form.Add("picbed", base64.StdEncoding.EncodeToString(pic))
-	post.Form.Add("filename", filepath.Base(f))
-	post.Form.Add("album", album)
-	post.Form.Add("title", desc)
-	if expire > 0 {
-		post.Form.Add("expire", string(strconv.Itoa(int(expire))))
+	var req *http.Request
+	if target.api == apiV2 {
+		req, err = newV2Request(target, f, pic)
+	} else {
+		req, err = newV1Request(target, f, pic)
 	}
-
-	ua := fmt.Sprintf(
-		"sapicli/%s go/%s %s %s",
-		version,
-		goVersion,
-		runtime.GOOS,
-		runtime.GOARCH,
-	)
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, err := http.NewRequest(
-		"POST", url, strings.NewReader(post.Form.Encode()),
-	)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", "LinkToken "+token)
-	req.Header.Set("User-Agent", ua)
+	req.Header.Set("User-Agent", userAgent())
 
+	client := &http.Client{Timeout: 30 * time.Second}
 	res, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
@@ -312,13 +354,269 @@ func apiUpload(f string, result *[]apiResult, index int) {
 		return
 	}
 
+	if target.api == apiV2 {
+		(*result)[index] = parseV2Body(body, res.StatusCode)
+		return
+	}
+
 	var data apiResult
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	(*result)[index] = data
-	wg.Done()
+}
+
+// newUploadTarget picks the api version and the upload endpoint to use.
+func newUploadTarget(rawURL, token string) uploadTarget {
+	root := siteRoot(rawURL)
+	api := detectAPI(rawURL, token)
+	return uploadTarget{
+		api:   api,
+		root:  root,
+		url:   uploadURL(root, api),
+		token: token,
+	}
+}
+
+// siteRoot strips a trailing api path so "-u site/api/v2" works as well as the
+// bare site url the doc recommends.
+func siteRoot(rawURL string) string {
+	root := strings.TrimRight(rawURL, "/")
+	for _, suffix := range []string{"/api/v2/upload", "/api/upload", "/api/v2", "/api"} {
+		if strings.HasSuffix(root, suffix) {
+			return strings.TrimSuffix(root, suffix)
+		}
+	}
+	return root
+}
+
+// detectAPI resolves the api version: -A wins, then an explicit api path in -u,
+// then the site probe (v2 answers /api/v2/site), then the PAT prefix.
+func detectAPI(rawURL, token string) string {
+	switch strings.ToLower(strings.TrimSpace(apiVer)) {
+	case apiV2, "2":
+		return apiV2
+	case apiV1, "1":
+		return apiV1
+	}
+
+	lowerURL := strings.ToLower(strings.TrimRight(rawURL, "/"))
+	if strings.Contains(lowerURL, "/api/v2") {
+		return apiV2
+	}
+	if strings.HasSuffix(lowerURL, "/api/upload") {
+		return apiV1
+	}
+	if siteIsV2(siteRoot(rawURL)) {
+		return apiV2
+	}
+	// The site probe may fail (blocked, offline); a v2 PAT still decides it.
+	if strings.HasPrefix(token, "sp_") {
+		return apiV2
+	}
+	return apiV1
+}
+
+// siteIsV2 reports whether the site serves the v2 api.
+func siteIsV2(root string) bool {
+	client := &http.Client{Timeout: 5 * time.Second}
+	res, err := client.Get(root + "/api/v2/site")
+	if err != nil {
+		return false
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return false
+	}
+
+	var payload struct {
+		Code string `json:"code"`
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		return false
+	}
+	return strings.HasPrefix(payload.Data.Version, "2.")
+}
+
+func uploadURL(root, api string) string {
+	if api == apiV2 {
+		return root + "/api/v2/upload"
+	}
+	return root + "/api/upload"
+}
+
+// resolveAlbumID maps the -a value to a v2 album id: digits are taken as the id,
+// anything else is looked up by name. A miss falls back to the token's own
+// album instead of blocking the upload.
+func resolveAlbumID(target uploadTarget, album string) string {
+	name := strings.TrimSpace(album)
+	if name == "" {
+		return ""
+	}
+	if _, err := strconv.Atoi(name); err == nil {
+		return name
+	}
+
+	req, err := http.NewRequest("GET", target.root+"/api/v2/albums", nil)
+	if err != nil {
+		log.Printf("resolve album %q failed: %s", name, err)
+		return ""
+	}
+	if target.token != "" {
+		req.Header.Set("Authorization", "Bearer "+target.token)
+	}
+	req.Header.Set("User-Agent", userAgent())
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	res, err := client.Do(req)
+	if err != nil {
+		log.Printf("resolve album %q failed: %s", name, err)
+		return ""
+	}
+	defer res.Body.Close()
+
+	var payload struct {
+		Code string `json:"code"`
+		Data struct {
+			Items []struct {
+				ID   int    `json:"id"`
+				Name string `json:"name"`
+			} `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		log.Printf("resolve album %q failed: %s", name, err)
+		return ""
+	}
+	for _, item := range payload.Data.Items {
+		if item.Name == name {
+			return strconv.Itoa(item.ID)
+		}
+	}
+	log.Printf("album %q not found, using the token default album", name)
+	return ""
+}
+
+// newV1Request posts the base64 payload the v1 api expects.
+func newV1Request(target uploadTarget, f string, pic []byte) (*http.Request, error) {
+	form := neturl.Values{}
+	form.Set("origin", "cli/"+version)
+	form.Set("_upload_field", "picbed")
+	form.Set("picbed", base64.StdEncoding.EncodeToString(pic))
+	form.Set("filename", filepath.Base(f))
+	form.Set("album", album)
+	form.Set("title", desc)
+	if expire > 0 {
+		form.Set("expire", strconv.Itoa(int(expire)))
+	}
+
+	req, err := http.NewRequest(
+		"POST", target.url, strings.NewReader(form.Encode()),
+	)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	if target.token != "" {
+		req.Header.Set("Authorization", "LinkToken "+target.token)
+	}
+	return req, nil
+}
+
+// newV2Request posts multipart/form-data with album_id, title and expire.
+func newV2Request(target uploadTarget, f string, pic []byte) (*http.Request, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	header := textproto.MIMEHeader{}
+	header.Set(
+		"Content-Disposition",
+		fmt.Sprintf(
+			`form-data; name="file"; filename="%s"`,
+			strings.Replace(filepath.Base(f), `"`, "", -1),
+		),
+	)
+	header.Set("Content-Type", http.DetectContentType(pic))
+	part, err := writer.CreatePart(header)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = part.Write(pic); err != nil {
+		return nil, err
+	}
+
+	if desc != "" {
+		writer.WriteField("title", desc)
+	}
+	if expire > 0 {
+		writer.WriteField("expire", strconv.Itoa(int(expire)))
+	}
+	if target.albumID != "" {
+		writer.WriteField("album_id", target.albumID)
+	}
+	if err = writer.Close(); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", target.url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if target.token != "" {
+		req.Header.Set("Authorization", "Bearer "+target.token)
+	}
+	return req, nil
+}
+
+// parseV2Body flattens the v2 envelope {code,message,data:{image}} into the
+// v1-shaped result the output styles and the copy logic already understand.
+func parseV2Body(body []byte, status int) apiResult {
+	var payload apiV2Result
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return apiResult{Code: status, Msg: strings.TrimSpace(string(body))}
+	}
+
+	image := payload.Data.Image
+	if payload.Code == "OK" && image.Src != "" {
+		return apiResult{
+			Code:     0,
+			Filename: image.Filename,
+			Src:      image.Src,
+			Tpl:      image.Tpl,
+		}
+	}
+
+	code := status
+	if code == http.StatusOK || code == http.StatusCreated {
+		code = -1
+	}
+	msg := payload.Message
+	if msg == "" {
+		msg = payload.Code
+	}
+	if payload.RequestID != "" {
+		msg = fmt.Sprintf("%s (request_id: %s)", msg, payload.RequestID)
+	}
+	if msg == "" {
+		msg = strings.TrimSpace(string(body))
+	}
+	return apiResult{Code: code, Msg: msg}
+}
+
+func userAgent() string {
+	return fmt.Sprintf(
+		"sapicli/%s go/%s %s %s",
+		version,
+		goVersion,
+		runtime.GOOS,
+		runtime.GOARCH,
+	)
 }
 
 func isExists(path string) (os.FileInfo, bool) {
